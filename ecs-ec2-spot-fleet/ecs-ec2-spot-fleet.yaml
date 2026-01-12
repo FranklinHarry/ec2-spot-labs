@@ -211,7 +211,43 @@ Resources:
       VpcId:
         Ref: vpc
     Type: AWS::EC2::SecurityGroup
+  snsKmsKey:
+    Properties:
+      Description: KMS key for SNS topic encryption
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: Enable IAM User Permissions
+          Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+          Action: 'kms:*'
+          Resource: '*'
+        - Sid: Allow SNS to use the key
+          Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action:
+          - 'kms:Decrypt'
+          - 'kms:GenerateDataKey'
+          Resource: '*'
+        - Sid: Allow EC2 instances to use the key
+          Effect: Allow
+          Principal:
+            AWS: !GetAtt spotFleetInstanceRole.Arn
+          Action:
+          - 'kms:Decrypt'
+          - 'kms:GenerateDataKey'
+          Resource: '*'
+    Type: AWS::KMS::Key
+  snsKmsKeyAlias:
+    Properties:
+      AliasName: !Sub 'alias/${AWS::StackName}-sns-key'
+      TargetKeyId: !Ref snsKmsKey
+    Type: AWS::KMS::Alias
   snsTopic:
+    Properties:
+      KmsMasterKeyId: !Ref snsKmsKey
     Type: AWS::SNS::Topic
   spotFleet:
     DependsOn:
