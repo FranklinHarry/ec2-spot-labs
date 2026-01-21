@@ -454,10 +454,45 @@ Resources:
           Tags:
           - Key: ReInvent-EC2SpotTestDev
             Value: TestSpotItn
+  spotInterruptionSnsKmsKey:
+    Properties:
+      Description: KMS key for SNS topic encryption
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: Enable IAM User Permissions
+          Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+          Action: 'kms:*'
+          Resource: '*'
+        - Sid: Allow SNS to use the key
+          Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action:
+          - 'kms:Decrypt'
+          - 'kms:GenerateDataKey'
+          Resource: '*'
+        - Sid: Allow CloudWatch Events to use the key
+          Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action:
+          - 'kms:Decrypt'
+          - 'kms:GenerateDataKey'
+          Resource: '*'
+    Type: AWS::KMS::Key
+  spotInterruptionSnsKmsKeyAlias:
+    Properties:
+      AliasName: !Sub 'alias/${AWS::StackName}-sns-key'
+      TargetKeyId: !Ref spotInterruptionSnsKmsKey
+    Type: AWS::KMS::Alias
   spotInterruptionSnsTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: ReInvent-EC2SpotTestDev-SpotInterruptionTopic
+      KmsMasterKeyId: !Ref spotInterruptionSnsKmsKey
   spotInterruptionSnsTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     DependsOn:

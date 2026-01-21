@@ -387,10 +387,45 @@ Resources:
       SubnetId:
         Ref: publicSubnet2
     Type: AWS::EC2::SubnetRouteTableAssociation
+  snsKmsKey:
+    Properties:
+      Description: KMS key for SNS topic encryption
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: Enable IAM User Permissions
+          Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+          Action: 'kms:*'
+          Resource: '*'
+        - Sid: Allow SNS to use the key
+          Effect: Allow
+          Principal:
+            Service: sns.amazonaws.com
+          Action:
+          - 'kms:Decrypt'
+          - 'kms:GenerateDataKey'
+          Resource: '*'
+        - Sid: Allow Lambda to use the key
+          Effect: Allow
+          Principal:
+            AWS: !GetAtt lambdaFunctionRole.Arn
+          Action:
+          - 'kms:Decrypt'
+          - 'kms:GenerateDataKey'
+          Resource: '*'
+    Type: AWS::KMS::Key
+  snsKmsKeyAlias:
+    Properties:
+      AliasName: !Sub 'alias/${AWS::StackName}-sns-key'
+      TargetKeyId: !Ref snsKmsKey
+    Type: AWS::KMS::Alias
   snsTopic:
     Properties:
       DisplayName:
         Ref: AWS::StackName
+      KmsMasterKeyId: !Ref snsKmsKey
     Type: AWS::SNS::Topic
   snsTopicPolicy:
     DependsOn:
